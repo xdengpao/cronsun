@@ -1,6 +1,7 @@
 package cronsun
 
 import (
+	component_job "bitqts/component/job"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -441,6 +442,33 @@ func (j *Job) Run() bool {
 	)
 
 	t := time.Now()
+	//added by jzhb
+	jobother := component_job.NewJob(j.Command)
+
+	if jobother != nil {
+		jobother.Init()
+		var errother error
+		var status string
+
+		// 超时控制
+		if j.Timeout > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(j.Timeout)*time.Second)
+			defer cancel()
+			status, errother = jobother.ExeContext(ctx, j.Command)
+		} else {
+			status, errother = jobother.Exe(j.Command)
+		}
+
+		if errother != nil {
+			j.Fail(t, fmt.Sprintf("%s", errother.Error()))
+			return false
+		} else {
+			j.Success(t, "status: "+status)
+			return true
+		}
+
+	}
+	//end
 
 	sysProcAttr, err = j.CreateCmdAttr()
 	if err != nil {
